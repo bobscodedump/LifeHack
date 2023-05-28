@@ -3,7 +3,7 @@ import { getAuth, signOut } from "firebase/auth";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-const auth = getAuth();
+import { auth } from "../../firebase";
 
 const HomeScreen = () => {
   const navigation = useNavigation();

@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { React, useState, useEffect } from "react";
+import { auth } from "../../firebase";
 import {
-  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { useNavigation } from "@react-navigation/core";
 
-const auth = getAuth();
+// const auth = getAuth();
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
