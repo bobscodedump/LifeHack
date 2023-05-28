@@ -5,14 +5,21 @@ import {
   KeyboardAvoidingView,
   TextInput,
   TouchableOpacity,
+  SafeAreaView,
+  Image,
 } from "react-native";
 import { React, useState, useEffect } from "react";
-import { auth } from "../../firebase";
+import { auth, db } from "../../firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { collection, doc, setDoc } from "@firebase/firestore";
 import { useNavigation } from "@react-navigation/core";
+import * as Svg from "react-native-svg";
+
+import Logo from "../../assets/icons/StudyPals.svg";
+import { colors } from "../../colors";
 
 // const auth = getAuth();
 
@@ -38,10 +45,22 @@ const LoginScreen = () => {
         // Signed in
         const user = userCredential.user;
         console.log("Registered with:", user.email);
+        setDoc(doc(db, "users", userCredential.user.uid), {
+          profile: "false",
+        });
       })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
+        if (errorCode == "email-already-in-use") {
+          alert("You already have an account with that email.");
+        } else if (errorCode == "auth/invalid-email") {
+          alert("Please provide a valid email");
+        } else if (errorCode == "auth/weak-password") {
+          alert("The password is too weak.");
+        } else {
+          alert(errorMessage);
+        }
         // ..
       });
   };
@@ -57,27 +76,32 @@ const LoginScreen = () => {
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
+        if (errorCode == "auth/invalid-email") {
+          alert("Please provide a valid email");
+        } else if (errorCode == "auth/wrong-password") {
+          alert("Wrong password. Please try again");
+        } else if (errorCode == "auth/user-not-found") {
+          alert("Username not recognised. Please try again");
+        } else {
+          alert(errorMessage);
+        }
       });
-    // auth
-    //   .signInWithEmailAndPassword(email, password)
-    //   .then(userCredentials => {
-    //     const user = userCredentials.user;
-    //     console.log('Logged in with:', user.email);
-    //   })
-    //   .catch(error => alert(error.message))
   };
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior="padding">
+      <Logo width={400} height={100} />
       <View style={styles.inputContainer}>
         <TextInput
           placeholder="Email"
+          placeholderTextColor="black"
           value={email}
           onChangeText={(text) => setEmail(text)}
           style={styles.input}
         />
         <TextInput
           placeholder="Password"
+          placeholderTextColor="black"
           value={password}
           onChangeText={(text) => setPassword(text)}
           style={styles.input}
@@ -106,12 +130,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: colors.lightPink,
   },
   inputContainer: {
+    marginTop: 40,
     width: "80%",
   },
   input: {
-    backgroundColor: "white",
+    backgroundColor: colors.beige,
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
@@ -124,16 +150,16 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   button: {
-    backgroundColor: "#0782F9",
+    backgroundColor: colors.darkBlue,
     width: "100%",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
   },
   buttonOutline: {
-    backgroundColor: "white",
+    backgroundColor: colors.limeGreen,
     marginTop: 5,
-    borderColor: "#0782F9",
+    borderColor: "black",
     borderWidth: 2,
   },
   buttonText: {
@@ -142,7 +168,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonOutlineText: {
-    color: "#0782F9",
+    color: "black",
     fontWeight: "700",
     fontSize: 16,
   },
