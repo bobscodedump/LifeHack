@@ -15,21 +15,50 @@ import { auth, db } from "../../firebase";
 import { colors } from "../../colors";
 
 const HomeScreen = () => {
-  const [profile, setProfile] = useState(false);
+  const [data, setData] = useState({
+    profile: false,
+    school: "",
+    tele: "",
+    username: "",
+    strengths: "",
+    weaknesses: "",
+    matches: "",
+  });
 
+  const [strArr, setStrArr] = useState([]);
+  const [wkArr, setWkArr] = useState([]);
+  const [matchArr, setMatchArr] = useState([]);
   const navigation = useNavigation();
 
-  const haveProfile = async () => {
+  // const haveProfile = async () => {
+  //   const docRef = doc(db, "users", auth.currentUser.uid);
+  //   const p = await getDoc(docRef);
+  //   console.log(p.data().profile);
+  //   if (!p) {
+  //     navigation.replace("Profile");
+  //   }
+  // };
+
+  const getProfile = async () => {
     const docRef = doc(db, "users", auth.currentUser.uid);
-    const p = await getDoc(docRef);
-    setProfile(p);
+    const docSnap = await getDoc(docRef);
+    const d = docSnap.data();
+    setData(d);
+    console.log(d);
+    if (!d.profile) {
+      navigation.replace("Profile");
+    }
+    setStrArr(d.strengths.split("\\"));
+    setWkArr(d.weaknesses.split("\\"));
+    setMatchArr(d.matches.split("\\"));
+    console.log(strArr);
+    console.log(wkArr);
+    console.log(matchArr);
+    console.log(data);
   };
 
   useEffect(() => {
-    haveProfile();
-    // if (profile) {
-    //   navigation.replace("Profile");
-    // }
+    getProfile();
   }, []);
 
   const handleSearch = () => {
@@ -64,7 +93,7 @@ const HomeScreen = () => {
         source={require("../../assets/card_images/cardimg2.jpeg")}
         style={styles.pfp}
       />
-      <Text style={styles.nameText}>Bob</Text>
+      <Text style={styles.nameText}>{data.username}</Text>
       <ScrollView
         style={styles.profile}
         contentContainerStyle={{ paddingBottom: 50 }}
@@ -78,14 +107,14 @@ const HomeScreen = () => {
             source={require("../../assets/icons/school.png")}
             style={styles.icon}
           />
-          <Text style={styles.school}>National University of Singapore</Text>
+          <Text style={styles.school}>{data.school}</Text>
         </View>
         <View style={styles.iconContainer}>
           <Image
             source={require("../../assets/icons/tele.png")}
             style={styles.icon}
           />
-          <Text style={styles.school}>@bobstele</Text>
+          <Text style={styles.school}>@{data.tele}</Text>
         </View>
         <View style={styles.iconContainer}>
           <Image
@@ -94,19 +123,26 @@ const HomeScreen = () => {
           />
           <Text style={styles.school}>Strengths:</Text>
         </View>
+        {/* <View style={styles.bubbleContainer}>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+        </View> */}
         <View style={styles.bubbleContainer}>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
+          {strArr.map((str) => (
+            <View style={styles.bubble}>
+              <Text style={{ fontSize: 15 }}>{str}</Text>
+            </View>
+          ))}
         </View>
         <View style={styles.iconContainer}>
           <Image
@@ -115,19 +151,26 @@ const HomeScreen = () => {
           />
           <Text style={styles.school}>Weaknesses:</Text>
         </View>
+        {/* <View style={styles.bubbleContainer}>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+          <View style={styles.bubble}>
+            <Text style={{ fontSize: 15 }}>Chemistry</Text>
+          </View>
+        </View> */}
         <View style={styles.bubbleContainer}>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
+          {wkArr.map((wk) => (
+            <View style={styles.bubble}>
+              <Text style={{ fontSize: 15 }}>{wk}</Text>
+            </View>
+          ))}
         </View>
         <View style={styles.iconContainer}>
           <Image
@@ -135,6 +178,24 @@ const HomeScreen = () => {
             style={styles.icon}
           />
           <Text style={styles.school}>Matched:</Text>
+        </View>
+        <View style={styles.bubbleContainer}>
+          {matchArr.map((match) => {
+            const temp = match.split("/");
+            return (
+              <View style={styles.bubbleContainer}>
+                <View style={styles.match}>
+                  <Text
+                    style={{ marginBottom: 3, fontWeight: "500", fontSize: 20 }}
+                  >
+                    {temp[0]}
+                    {"  "}
+                  </Text>
+                  <Text style={{ marginBottom: 4 }}>@{temp[1]}</Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
         <View
           style={{
@@ -162,11 +223,6 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  //   container: {
-  //     flex: 1,
-  //     justifyContent: "center",
-  //     alignItems: "center",
-  //   },
   updateButton: {
     backgroundColor: colors.limeGreen,
     alignSelf: "center",
@@ -264,5 +320,15 @@ const styles = StyleSheet.create({
   },
   searchText: {
     fontSize: 35,
+  },
+  match: {
+    backgroundColor: colors.beige,
+    borderWidth: 1.5,
+    marginHorizontal: -20,
+    borderRadius: 15,
+    padding: 5,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 10,
   },
 });

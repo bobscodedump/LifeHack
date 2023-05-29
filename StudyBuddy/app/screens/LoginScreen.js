@@ -46,7 +46,13 @@ const LoginScreen = () => {
         const user = userCredential.user;
         console.log("Registered with:", user.email);
         setDoc(doc(db, "users", userCredential.user.uid), {
-          profile: "false",
+          profile: false,
+          school: "",
+          tele: "",
+          username: "",
+          strengths: "",
+          weaknesses: "",
+          matches: "",
         });
       })
       .catch((error) => {
