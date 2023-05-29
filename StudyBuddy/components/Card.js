@@ -1,5 +1,4 @@
-// Note to others: Code for card swiping is implemented in App.js as IDK how to do page navigation yet
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -12,6 +11,7 @@ import {
 const Card = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const position = useRef(new Animated.ValueXY()).current;
+  
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -27,6 +27,8 @@ const Card = () => {
           }).start(() => {
             setCurrentIndex(currentIndex + 1);
             position.setValue({ x: 0, y: 0 });
+            // To signal acceptance (Replace log statement with function to link to firebase)
+            console.log("ACCEPTED");
           });
         } else if (gesture.dx < -120) {
           // Swipe left
@@ -36,6 +38,8 @@ const Card = () => {
           }).start(() => {
             setCurrentIndex(currentIndex + 1);
             position.setValue({ x: 0, y: 0 });
+            // To signal rejection (Replace log statement with function to link to firebase)
+            console.log("REJECTED");
           });
         } else {
           // Return to the original position
@@ -66,7 +70,17 @@ const Card = () => {
 
   const renderProfiles = () => {
     return data.map((profile, index) => {
-      if (index < currentIndex) {
+      // I tried to display this when the cards have finished swiping but it does not work somehow
+      // I think it is due to the useState for currentIndex not working properly when a card is swiped
+      if (currentIndex >= data.length) {
+        return (
+          <View style-={styles.noMatchesContainer}>
+            <Text style={styles.noMatchesText}>
+              NO MORE MATCHES
+            </Text>
+          </View>
+        );
+      } else if (index < currentIndex) {
         return null; // Skip profiles that have already been swiped
       } else if (index === currentIndex) {
         return (
@@ -115,6 +129,8 @@ const Card = () => {
   return <View style={styles.container}>{renderProfiles()}</View>;
 };
 
+export default Card;
+
 // Styles
 const styles = StyleSheet.create({
   container: {
@@ -144,6 +160,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
+  noMatchesContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noMatchesText: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
 });
-
-export default Card;

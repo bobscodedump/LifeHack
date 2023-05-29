@@ -47,14 +47,15 @@ const HomeScreen = () => {
     console.log(d);
     if (!d.profile) {
       navigation.replace("Profile");
+    } else {
+      setStrArr(d.strengths.split("\\"));
+      setWkArr(d.weaknesses.split("\\"));
+      setMatchArr(d.matches.split("\\"));
+      console.log(strArr);
+      console.log(wkArr);
+      console.log(matchArr);
+      console.log(data);
     }
-    setStrArr(d.strengths.split("\\"));
-    setWkArr(d.weaknesses.split("\\"));
-    setMatchArr(d.matches.split("\\"));
-    console.log(strArr);
-    console.log(wkArr);
-    console.log(matchArr);
-    console.log(data);
   };
 
   useEffect(() => {
