@@ -55,6 +55,7 @@ const LoginScreen = () => {
           matches: "",
           image: "",
           level: "",
+          waitlist: "",
         });
       })
       .catch((error) => {

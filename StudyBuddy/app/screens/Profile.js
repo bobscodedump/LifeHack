@@ -15,7 +15,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigation } from "expo-router";
 import { MultipleSelectList } from "react-native-dropdown-select-list";
 import * as ImagePicker from "expo-image-picker";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import {
   ref,
   uploadBytes,
@@ -77,6 +77,7 @@ const Profile = () => {
       const str = strengths
         .reduce((acc, curr) => acc + "\\" + curr, "")
         .slice(1);
+      console.log(str);
       const wk = weaknesses
         .reduce((acc, curr) => acc + "\\" + curr, "")
         .slice(1);
@@ -98,7 +99,7 @@ const Profile = () => {
 
         await new Promise((r) => setTimeout(r, 500));
 
-        await setDoc(docRef, {
+        await updateDoc(docRef, {
           profile: true,
           school: school,
           tele: telehandle,

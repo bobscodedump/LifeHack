@@ -11,7 +11,7 @@ import {
 const Card = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const position = useRef(new Animated.ValueXY()).current;
-  
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -66,6 +66,30 @@ const Card = () => {
       name: "Jane Smith",
       age: 25,
     },
+    {
+      id: "2",
+      image: require("../assets/card_images/cardimg2.jpeg"),
+      name: "Jane Smith",
+      age: 25,
+    },
+    {
+      id: "2",
+      image: require("../assets/card_images/cardimg2.jpeg"),
+      name: "Jane Smith",
+      age: 25,
+    },
+    {
+      id: "2",
+      image: require("../assets/card_images/cardimg2.jpeg"),
+      name: "Jane Smith",
+      age: 25,
+    },
+    {
+      id: "2",
+      image: require("../assets/card_images/cardimg2.jpeg"),
+      name: "Jane Smith",
+      age: 25,
+    },
   ];
 
   const renderProfiles = () => {
@@ -75,9 +99,7 @@ const Card = () => {
       if (currentIndex >= data.length) {
         return (
           <View style-={styles.noMatchesContainer}>
-            <Text style={styles.noMatchesText}>
-              NO MORE MATCHES
-            </Text>
+            <Text style={styles.noMatchesText}>NO MORE MATCHES</Text>
           </View>
         );
       } else if (index < currentIndex) {

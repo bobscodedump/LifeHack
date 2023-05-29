@@ -49,9 +49,17 @@ const HomeScreen = () => {
     if (!d.profile) {
       navigation.replace("Profile");
     } else {
-      setStrArr(d.strengths.split("\\"));
-      setWkArr(d.weaknesses.split("\\"));
-      setMatchArr(d.matches.split("\\"));
+      if (d.strengths != undefined) {
+        setStrArr(d.strengths.split("\\"));
+      }
+      if (d.weaknesses != undefined) {
+        setWkArr(d.weaknesses.split("\\"));
+      }
+      if (d.matches != undefined) {
+        setMatchArr(
+          d.matches.split("\\").map((x) => x.replace("undefined", ""))
+        );
+      }
       console.log(strArr);
       console.log(wkArr);
       console.log(matchArr);
@@ -133,26 +141,16 @@ const HomeScreen = () => {
           />
           <Text style={styles.school}>Strengths:</Text>
         </View>
-        {/* <View style={styles.bubbleContainer}>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-        </View> */}
+
         <View style={styles.bubbleContainer}>
-          {strArr.map((str) => (
-            <View style={styles.bubble} key={str}>
-              <Text style={{ fontSize: 15 }}>{str}</Text>
-            </View>
-          ))}
+          {strArr.map(
+            (str) =>
+              str && (
+                <View style={styles.bubble} key={str}>
+                  <Text style={{ fontSize: 15 }}>{str}</Text>
+                </View>
+              )
+          )}
         </View>
         <View style={styles.iconContainer}>
           <Image
@@ -161,26 +159,16 @@ const HomeScreen = () => {
           />
           <Text style={styles.school}>Weaknesses:</Text>
         </View>
-        {/* <View style={styles.bubbleContainer}>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={{ fontSize: 15 }}>Chemistry</Text>
-          </View>
-        </View> */}
+
         <View style={styles.bubbleContainer}>
-          {wkArr.map((wk) => (
-            <View style={styles.bubble} key={wk}>
-              <Text style={{ fontSize: 15 }}>{wk}</Text>
-            </View>
-          ))}
+          {wkArr.map(
+            (wk) =>
+              wk && (
+                <View style={styles.bubble} key={wk}>
+                  <Text style={{ fontSize: 15 }}>{wk}</Text>
+                </View>
+              )
+          )}
         </View>
         <View style={styles.iconContainer}>
           <Image
@@ -193,17 +181,23 @@ const HomeScreen = () => {
           {matchArr.map((match) => {
             const temp = match.split("/");
             return (
-              <View style={styles.bubbleContainer} key={match}>
-                <View style={styles.match}>
-                  <Text
-                    style={{ marginBottom: 3, fontWeight: "500", fontSize: 20 }}
-                  >
-                    {temp[0]}
-                    {"  "}
-                  </Text>
-                  <Text style={{ marginBottom: 4 }}>@{temp[1]}</Text>
+              temp[0] && (
+                <View style={styles.bubbleContainer} key={match}>
+                  <View style={styles.match}>
+                    <Text
+                      style={{
+                        marginBottom: 3,
+                        fontWeight: "500",
+                        fontSize: 20,
+                      }}
+                    >
+                      {temp[0]}
+                      {"  "}
+                    </Text>
+                    <Text style={{ marginBottom: 4 }}>@{temp[1]}</Text>
+                  </View>
                 </View>
-              </View>
+              )
             );
           })}
         </View>
@@ -313,7 +307,7 @@ const styles = StyleSheet.create({
     padding: 5,
     borderColor: colors.darkBlue,
     backgroundColor: colors.beige,
-    margin: 10,
+    margin: 5,
   },
   bubbleContainer: {
     flexWrap: "wrap",
@@ -329,7 +323,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   searchText: {
-    fontSize: 35,
+    fontSize: 25,
   },
   match: {
     backgroundColor: colors.beige,
