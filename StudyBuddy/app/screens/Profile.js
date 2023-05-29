@@ -11,7 +11,7 @@ import {
   Button,
 } from "react-native";
 import {Picker} from "@react-native-picker/picker";
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import { useNavigation } from "expo-router";
 import { MultipleSelectList } from 'react-native-dropdown-select-list'
 import * as ImagePicker from 'expo-image-picker';
@@ -56,17 +56,20 @@ const Profile = () => {
 
   const handleEduLevelChange = (itemValue) => {
     setEduLevel(itemValue);
-    if (eduLevel === "") {
-      setShowSchools(false);
-    } else {
-      setShowSchools(true);
-    }
   };
 
   
   const handleProfileEdit = () => {
     navigation.replace("Home");
   };
+
+  useEffect(() => {
+    if (eduLevel === "") {
+      setShowSchools(false);
+    } else {
+      setShowSchools(true);
+    }
+  }, [eduLevel]);
 
   return (
     <KeyboardAvoidingView style={styles.container}>
