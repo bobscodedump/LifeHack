@@ -23,6 +23,7 @@ const HomeScreen = () => {
     strengths: "",
     weaknesses: "",
     matches: "",
+    image: "",
   });
 
   const [strArr, setStrArr] = useState([]);
@@ -89,10 +90,18 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Image
+      {!data.image ? (
+        <Image
+          source={require("../../assets/images/emptyPic.png")}
+          style={styles.pfp}
+        />
+      ) : (
+        <Image source={{ uri: data.image }} style={styles.pfp} />
+      )}
+      {/* <Image
         source={require("../../assets/card_images/cardimg2.jpeg")}
         style={styles.pfp}
-      />
+      /> */}
       <Text style={styles.nameText}>{data.username}</Text>
       <ScrollView
         style={styles.profile}
@@ -139,7 +148,7 @@ const HomeScreen = () => {
         </View> */}
         <View style={styles.bubbleContainer}>
           {strArr.map((str) => (
-            <View style={styles.bubble}>
+            <View style={styles.bubble} key={str}>
               <Text style={{ fontSize: 15 }}>{str}</Text>
             </View>
           ))}
@@ -167,7 +176,7 @@ const HomeScreen = () => {
         </View> */}
         <View style={styles.bubbleContainer}>
           {wkArr.map((wk) => (
-            <View style={styles.bubble}>
+            <View style={styles.bubble} key={wk}>
               <Text style={{ fontSize: 15 }}>{wk}</Text>
             </View>
           ))}
@@ -183,7 +192,7 @@ const HomeScreen = () => {
           {matchArr.map((match) => {
             const temp = match.split("/");
             return (
-              <View style={styles.bubbleContainer}>
+              <View style={styles.bubbleContainer} key={match}>
                 <View style={styles.match}>
                   <Text
                     style={{ marginBottom: 3, fontWeight: "500", fontSize: 20 }}
@@ -298,9 +307,9 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
   bubble: {
-    borderRadius: 13,
+    borderRadius: 17,
     borderWidth: 1.5,
-    padding: 3,
+    padding: 5,
     borderColor: colors.darkBlue,
     backgroundColor: colors.beige,
     margin: 10,

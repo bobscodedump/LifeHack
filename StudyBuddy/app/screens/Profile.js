@@ -10,34 +10,41 @@ import {
   TextInput,
   Button,
 } from "react-native";
-import {Picker} from "@react-native-picker/picker";
-import React, {useState} from "react";
+import { Picker } from "@react-native-picker/picker";
+import React, { useState, useEffect } from "react";
 import { useNavigation } from "expo-router";
-import { MultipleSelectList } from 'react-native-dropdown-select-list'
-import * as ImagePicker from 'expo-image-picker';
-import { colors } from "../../colors";
+import { MultipleSelectList } from "react-native-dropdown-select-list";
+import * as ImagePicker from "expo-image-picker";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
+import { db, auth, storage } from "../../firebase";
+import { colors } from "../../colors";
 
 const Profile = () => {
   const navigation = useNavigation();
-  const [username, setUserName] = useState("");
-  const [telehandle, setTeleHandle] = useState("");
+  const [username, setUserName] = useState("Username:");
+  const [telehandle, setTeleHandle] = useState("Telegram handle:");
   const [eduLevel, setEduLevel] = useState("");
   const [school, setSchool] = useState("");
   const [showSchools, setShowSchools] = useState(false);
   const [strengths, setStrengths] = useState([]);
   const [weaknesses, setWeaknesses] = useState([]);
-  const [image, setImage] = useState(null);;
+  const [image, setImage] = useState(null);
+  const [url, setUrl] = useState("");
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
+      aspect: [3, 3],
+      quality: 0.5,
     });
-
-    console.log(result);
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
@@ -45,14 +52,16 @@ const Profile = () => {
   };
 
   const subjects = [
-    {key: '0', value: "Computer Science"},
-    {key: '1', value: "Mathematics"},
-    {key: '2', value: "Economics"},
-    {key: '3', value: "Chemistry"},
-    {key: '4', value: "Geography"},
-    {key: '5', value: "History"},
-    {key: '6', value: "Physics"}
-  ]
+    { key: "0", value: "Computer Science" },
+    { key: "1", value: "Mathematics" },
+    { key: "2", value: "Economics" },
+    { key: "3", value: "Chemistry" },
+    { key: "4", value: "Geography" },
+    { key: "5", value: "History" },
+    { key: "6", value: "Physics" },
+    { key: "7", value: "Biology" },
+    { key: "8", value: "Literature" },
+  ];
 
   const handleEduLevelChange = (itemValue) => {
     setEduLevel(itemValue);
@@ -63,41 +72,103 @@ const Profile = () => {
     }
   };
 
-  
-  const handleProfileEdit = () => {
-    navigation.replace("Home");
+  const handleProfileEdit = async () => {
+    try {
+      const str = strengths
+        .reduce((acc, curr) => acc + "\\" + curr, "")
+        .slice(1);
+      const wk = weaknesses
+        .reduce((acc, curr) => acc + "\\" + curr, "")
+        .slice(1);
+      const docRef = doc(db, "users", auth.currentUser.uid);
+      const imgRef = ref(storage, auth.currentUser.uid);
+
+      if (!imgRef) {
+        deleteObject(imgRef);
+      }
+
+      const response = await fetch(image);
+      const blob = await response.blob();
+      console.log(blob.size);
+
+      if (blob.size < 2500000) {
+        await uploadBytes(imgRef, blob).then((snapshot) => {
+          getDownloadURL(snapshot.ref).then((url) => (temp = url));
+        });
+
+        await new Promise((r) => setTimeout(r, 500));
+
+        await setDoc(docRef, {
+          profile: true,
+          school: school,
+          tele: telehandle,
+          username: username,
+          strengths: str,
+          weaknesses: wk,
+          level: eduLevel,
+          image: temp,
+        });
+        navigation.replace("Home");
+      } else {
+        alert("File is too large, please upload a file smaller than 2.5mb.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    console.log("nav");
   };
 
-  return (
-    <KeyboardAvoidingView style={styles.container}>
-      
-      <View style={styles.inputContainer}>
-          <TextInput
-              placeholder='Username:'
-              placeholderTextColor="black"
-              onChangeText={(text) =>{setUserName(text)}}
-              style = {[styles.textInput]}/>
+  const getProfile = async () => {
+    const docRef = doc(db, "users", auth.currentUser.uid);
+    const docSnap = await getDoc(docRef);
+    const d = docSnap.data();
+    console.log(d);
+    setUserName(d.username);
+    setTeleHandle(d.tele);
+    setEduLevel(d.level);
+    setSchool(d.school);
+    setStrengths(d.strengths.split("\\"));
+    setWeaknesses(d.weaknesses.split("\\"));
+    setImage(d.image);
+  };
 
-          <TextInput
-              placeholder='Telehandle:'
-              placeholderTextColor="black"
-              onChangeText={(text) =>{setTeleHandle(text)}}
-              style = {[styles.textInput]}/>
-          <View style = {[styles.pickerInput]}>
-          <Picker 
-            onValueChange={handleEduLevelChange}
-            selectedValue={eduLevel}>              
+  useEffect(() => {
+    getProfile();
+  }, []);
+
+  return (
+    <ScrollView contentContainerStyle={styles.container} style={{ flex: 1 }}>
+      <Text style={styles.profileHeader}>Update Profile</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          defaultValue={username}
+          placeholderTextColor="black"
+          onChangeText={(text) => {
+            setUserName(text);
+          }}
+          style={[styles.textInput]}
+        />
+
+        <TextInput
+          defaultValue={telehandle}
+          placeholderTextColor="black"
+          onChangeText={(text) => {
+            setTeleHandle(text);
+          }}
+          style={[styles.textInput]}
+        />
+        <View style={[styles.pickerInput]}>
+          <Picker onValueChange={handleEduLevelChange} selectedValue={eduLevel}>
             <Picker.Item label="Select your education level" value="" />
-            <Picker.Item label="Primary" value="Primary" />
             <Picker.Item label="Secondary" value="Secondary" />
             <Picker.Item label="Junior College" value="Junior College" />
             <Picker.Item label="Polytechnic" value="Polytechnic" />
             <Picker.Item label="University" value="University" />
           </Picker>
-          </View>     
+        </View>
 
-          <View style = {[styles.pickerInput]}>
-          {eduLevel === "Primary" && showSchools && (
+        <View style={[styles.pickerInput]}>
+          {/* {eduLevel !== "Primary" && showSchools && (
             <Picker
               selectedValue={school}
               onValueChange={(itemValue) => setSchool(itemValue)}
@@ -289,190 +360,688 @@ const Profile = () => {
               <Picker.Item label="Zhenghua Primary School" value="Zhenghua Primary School"/>
               <Picker.Item label="Zhonghua Primary School" value="Zhonghua Primary School"/>
             </Picker>
-          )} 
+          )}  */}
 
-          {eduLevel === "Secondary" && showSchools && (
+          {eduLevel === "Secondary" && (
             <Picker
               selectedValue={school}
               onValueChange={(itemValue) => setSchool(itemValue)}
             >
               <Picker.Item label="Select your school" value="" />
-              <Picker.Item label="Admiralty Secondary School"  value="Admiralty Secondary School"/>
-              <Picker.Item label="Ahmad Ibrahim Secondary School"  value="Ahmad Ibrahim Secondary School"/>
-              <Picker.Item label="Anderson Secondary School"  value="Anderson Secondary School"/>
-              <Picker.Item label="Anglican High School" value="Anglican High School"/>
-              <Picker.Item label="Anglo-Chinese School (Barker Road)"  value="Anglo-Chinese School (Barker Road)"/>
-              <Picker.Item label="Anglo-Chinese School (Independent)"  value="Anglo-Chinese School (Independent)"/>
-              <Picker.Item label="Ang Mo Kio Secondary School"  value="Ang Mo Kio Secondary School"/>
-              <Picker.Item label="Assumption English School"  value="Assumption English School"/>
-              <Picker.Item label="Bartley Secondary School"  value="Bartley Secondary School"/>
-              <Picker.Item label="Beatty Secondary School"  value="Beatty Secondary School"/>
-              <Picker.Item label="Bedok Green Secondary School"  value="Bedok Green Secondary School"/>
-              <Picker.Item label="Bedok South Secondary School"  value="Bedok South Secondary School"/>
-              <Picker.Item label="Bedok View Secondary School"  value="Bedok View Secondary School"/>
-              <Picker.Item label="Bendemeer Secondary School"  value="Bendemeer Secondary School"/>
-              <Picker.Item label="Boon Lay Secondary School"  value="Boon Lay Secondary School"/>
-              <Picker.Item label="Bowen Secondary School"  value="Bowen Secondary School"/>
-              <Picker.Item label="Broadrick Secondary School"  value="Broadrick Secondary School"/>
-              <Picker.Item label="Bukit Batok Secondary School"  value="Bukit Batok Secondary School"/>
-              <Picker.Item label="Bukit Merah Secondary School"  value="Bukit Merah Secondary School"/>
-              <Picker.Item label="Bukit Panjang Government High School"  value="Bukit Panjang Government High School"/>
-              <Picker.Item label="Bukit View Secondary School"  value="Bukit View Secondary School"/>
-              <Picker.Item label="Catholic High School"  value="Catholic High School"/>
-              <Picker.Item label="Canberra Secondary School"  value="Canberra Secondary School"/>
-              <Picker.Item label="Cedar Girls' Secondary School"  value="Cedar Girls' Secondary School"/>
-              <Picker.Item label="Changkat Changi Secondary School"  value="Changkat Changi Secondary School"/>
-              <Picker.Item label="CHIJ Katong Convent (Secondary)"  value="CHIJ Katong Convent (Secondary)"/>
-              <Picker.Item label="CHIJ Secondary (Toa Payoh)"  value="CHIJ Secondary (Toa Payoh)"/>
-              <Picker.Item label="CHIJ St. Joseph's Convent"  value="CHIJ St. Joseph's Convent"/>
-              <Picker.Item label="CHIJ St. Nicholas Girls' School"  value="CHIJ St. Nicholas Girls' School"/>
-              <Picker.Item label="CHIJ St. Theresa's Convent"  value="CHIJ St. Theresa's Convent"/>
-              <Picker.Item label="Chua Chu Kang Secondary School"  value="Chua Chu Kang Secondary School"/>
-              <Picker.Item label="Christ Church Secondary School"  value="Christ Church Secondary School"/>
-              <Picker.Item label="Chung Cheng High School (Main)"  value="Chung Cheng High School (Main)"/>
-              <Picker.Item label="Chung Cheng High School (Yishun)"  value="Chung Cheng High School (Yishun)"/>
-              <Picker.Item label="Clementi Town Secondary School"  value="Clementi Town Secondary School"/>
-              <Picker.Item label="Commonwealth Secondary School"  value="Commonwealth Secondary School"/>
-              <Picker.Item label="Compassvale Secondary School"  value="Compassvale Secondary School"/>
-              <Picker.Item label="Crescent Girls' School"  value="Crescent Girls' School"/>
-              <Picker.Item label="Damai Secondary School"  value="Damai Secondary School"/>
-              <Picker.Item label="Deyi Secondary School"  value="Deyi Secondary School"/>
-              <Picker.Item label="Dunearn Secondary School"  value="Dunearn Secondary School"/>
-              <Picker.Item label="Dunman High School"  value="Dunman High School"/>
-              <Picker.Item label="Dunman Secondary School"  value="Dunman Secondary School"/>
-              <Picker.Item label="East Spring Secondary School"  value="East Spring Secondary School"/>
-              <Picker.Item label="Edgefield Secondary School"  value="Edgefield Secondary School"/>
-              <Picker.Item label="Evergreen Secondary School"  value="Evergreen Secondary School"/>
-              <Picker.Item label="Fairfield Methodist Secondary School"  value="Fairfield Methodist Secondary School"/>
-              <Picker.Item label="Fuchun Secondary School"  value="Fuchun Secondary School"/>
-              <Picker.Item label="Fuhua Secondary School"  value="Fuhua Secondary School"/>
-              <Picker.Item label="Gan Eng Seng School"  value="Gan Eng Seng School"/>
-              <Picker.Item label="Geylang Methodist School (Secondary)"  value="Geylang Methodist School (Secondary)"/>
-              <Picker.Item label="Greendale Secondary School"  value="Greendale Secondary School"/>
-              <Picker.Item label="Greenridge Secondary School"  value="Greenridge Secondary School"/>
-              <Picker.Item label="Guangyang Secondary School"  value="Guangyang Secondary School"/>
-              <Picker.Item label="Hai Sing Catholic School"  value="Hai Sing Catholic School"/>
-              <Picker.Item label="Hillgrove Secondary School"  value="Hillgrove Secondary School"/>
-              <Picker.Item label="Holy Innocents' High School"  value="Holy Innocents' High School"/>
-              <Picker.Item label="Hougang Secondary School"  value="Hougang Secondary School"/>
-              <Picker.Item label="Hua Yi Secondary School"  value="Hua Yi Secondary School"/>
-              <Picker.Item label="Hwa Chong Institution"  value="Hwa Chong Institution"/>
-              <Picker.Item label="Junyuan Secondary School"  value="Junyuan Secondary School"/>
-              <Picker.Item label="Jurong Secondary School"  value="Jurong Secondary School"/>
-              <Picker.Item label="Jurong West Secondary School"  value="Jurong West Secondary School"/>
-              <Picker.Item label="Jurongville Secondary School"  value="Jurongville Secondary School"/>
-              <Picker.Item label="Juying Secondary School"  value="Juying Secondary School"/>
-              <Picker.Item label="Kent Ridge Secondary School"  value="Kent Ridge Secondary School"/>
-              <Picker.Item label="Kranji Secondary School"  value="Kranji Secondary School"/>
-              <Picker.Item label="Kuo Chuan Presbyterian Secondary School"  value="Kuo Chuan Presbyterian Secondary School"/>
-              <Picker.Item label="Loyang View Secondary School"  value="Loyang View Secondary School"/>
-              <Picker.Item label="Manjusri Secondary School"  value="Manjusri Secondary School"/>
-              <Picker.Item label="Maris Stella High School"  value="Maris Stella High School"/>
-              <Picker.Item label="Marsiling Secondary School"  value="Marsiling Secondary School"/>
-              <Picker.Item label="Mayflower Secondary School"  value="Mayflower Secondary School"/>
-              <Picker.Item label="Meridian Secondary School"  value="Meridian Secondary School"/>
-              <Picker.Item label="Methodist Girls' School (Secondary)"  value="Methodist Girls' School (Secondary)"/>
-              <Picker.Item label="Montfort Secondary School"  value="Montfort Secondary School"/>
-              <Picker.Item label="Nan Chiau High School"  value="Nan Chiau High School"/>
-              <Picker.Item label="Nan Hua High School"  value="Nan Hua High School"/>
-              <Picker.Item label="Nanyang Girls' High School"  value="Nanyang Girls' High School"/>
-              <Picker.Item label="National Junior College"  value="National Junior College"/>
-              <Picker.Item label="Naval Base Secondary School"  value="Naval Base Secondary School"/>
-              <Picker.Item label="New Town Secondary School"  value="New Town Secondary School"/>
-              <Picker.Item label="Ngee Ann Secondary School"  value="Ngee Ann Secondary School"/>
-              <Picker.Item label="North Vista Secondary School"  value="North Vista Secondary School"/>
-              <Picker.Item label="Northbrooks Secondary School"  value="Northbrooks Secondary School"/>
-              <Picker.Item label="Northland Secondary School"  value="Northland Secondary School"/>
-              <Picker.Item label="NUS High School of Mathematics and Science"  value="NUS High School of Mathematics and Science"/>
-              <Picker.Item label="Orchid Park Secondary School"  value="Orchid Park Secondary School"/>
-              <Picker.Item label="Outram Secondary School"  value="Outram Secondary School"/>
-              <Picker.Item label="Pasir Ris Crest Secondary School"  value="Pasir Ris Crest Secondary School"/>
-              <Picker.Item label="Pasir Ris Secondary School"  value="Pasir Ris Secondary School"/>
-              <Picker.Item label="Paya Lebar Methodist Girls' School (Secondary)"  value="Paya Lebar Methodist Girls' School (Secondary)"/>
-              <Picker.Item label="Pei Hwa Secondary School"  value="Pei Hwa Secondary School"/>
-              <Picker.Item label="Peicai Secondary School"  value="Peicai Secondary School"/>
-              <Picker.Item label="Peirce Secondary School"  value="Peirce Secondary School"/>
-              <Picker.Item label="Presbyterian High School"  value="Presbyterian High School"/>
-              <Picker.Item label="Punggol Secondary School"  value="Punggol Secondary School"/>
-              <Picker.Item label="Queenstown Secondary School"  value="Queenstown Secondary School"/>
-              <Picker.Item label="Queensway Secondary School"  value="Queensway Secondary School"/>
-              <Picker.Item label="Raffles Girls' School (Secondary)"  value="Raffles Girls' School (Secondary)"/>
-              <Picker.Item label="Raffles Institution"  value="Raffles Institution"/>
-              <Picker.Item label="Regent Secondary School"  value="Regent Secondary School"/>
-              <Picker.Item label="Riverside Secondary School"  value="Riverside Secondary School"/>
-              <Picker.Item label="River Valley High School"  value="River Valley High School"/>
-              <Picker.Item label="St. Andrew's Secondary School"  value="St. Andrew's Secondary School"/>
-              <Picker.Item label="St. Patrick's School"  value="St. Patrick's School"/>
-              <Picker.Item label="School of Science and Technology, Singapore"  value="School of Science and Technology, Singapore"/>
-              <Picker.Item label="School of the Arts"  value="School of the Arts"/>
-              <Picker.Item label="Sembawang Secondary School"  value="Sembawang Secondary School"/>
-              <Picker.Item label="Sengkang Secondary School"  value="Sengkang Secondary School"/>
-              <Picker.Item label="Serangoon Garden Secondary School"  value="Serangoon Garden Secondary School"/>
-              <Picker.Item label="Serangoon Secondary School"  value="Serangoon Secondary School"/>
-              <Picker.Item label="Singapore Chinese Girls' School"  value="Singapore Chinese Girls' School"/>
-              <Picker.Item label="Singapore Sports School"  value="Singapore Sports School"/>
-              <Picker.Item label="Springfield Secondary School"  value="Springfield Secondary School"/>
-              <Picker.Item label="St. Anthony's Canossian Secondary School"  value="St. Anthony's Canossian Secondary School"/>
-              <Picker.Item label="St. Gabriel's Secondary School"  value="St. Gabriel's Secondary School"/>
-              <Picker.Item label="St. Hilda's Secondary School"  value="St. Hilda's Secondary School"/>
-              <Picker.Item label="St. Margaret's Secondary School"  value="St. Margaret's Secondary School"/>
-              <Picker.Item label="St. Joseph's Institution"  value="St. Joseph's Institution"/>
-              <Picker.Item label="Swiss Cottage Secondary School"  value="Swiss Cottage Secondary School"/>
-              <Picker.Item label="Tanglin Secondary School"  value="Tanglin Secondary School"/>
-              <Picker.Item label="Tampines Secondary School"  value="Tampines Secondary School"/>
-              <Picker.Item label="Tanjong Katong Girls' School"  value="Tanjong Katong Girls' School"/>
-              <Picker.Item label="Tanjong Katong Secondary School"  value="Tanjong Katong Secondary School"/>
-              <Picker.Item label="Temasek Junior College"  value="Temasek Junior College"/>
-              <Picker.Item label="Temasek Secondary School"  value="Temasek Secondary School"/>
-              <Picker.Item label="Unity Secondary School"  value="Unity Secondary School"/>
-              <Picker.Item label="Victoria School"  value="Victoria School"/>
-              <Picker.Item label="West Spring Secondary School"  value="West Spring Secondary School"/>
-              <Picker.Item label="Westwood Secondary School"  value="Westwood Secondary School"/>
-              <Picker.Item label="Whitley Secondary School"  value="Whitley Secondary School"/>
-              <Picker.Item label="Woodgrove Secondary School"  value="Woodgrove Secondary School"/>
-              <Picker.Item label="Woodlands Ring Secondary School"  value="Woodlands Ring Secondary School"/>
-              <Picker.Item label="Woodlands Secondary School"  value="Woodlands Secondary School"/>
-              <Picker.Item label="Xinmin Secondary School"  value="Xinmin Secondary School"/>
-              <Picker.Item label="Yio Chu Kang Secondary School"  value="Yio Chu Kang Secondary School"/>
-              <Picker.Item label="Yishun Secondary School"  value="Yishun Secondary School"/>
-              <Picker.Item label="Yishun Town Secondary School"  value="Yishun Town Secondary School"/>
-              <Picker.Item label="Yuan Ching Secondary School"  value="Yuan Ching Secondary School"/>
-              <Picker.Item label="Yuhua Secondary School"  value="Yuhua Secondary School"/>
-              <Picker.Item label="Yusof Ishak Secondary School"  value="Yusof Ishak Secondary School"/>
-              <Picker.Item label="Yuying Secondary School"  value="Yuying Secondary School"/>
-              <Picker.Item label="Zhenghua Secondary School"  value="Zhenghua Secondary School"/>
-              <Picker.Item label="Zhonghua Secondary School"  value="Zhonghua Secondary School"/>
+              <Picker.Item
+                label="Admiralty Secondary School"
+                value="Admiralty Secondary School"
+              />
+              <Picker.Item
+                label="Ahmad Ibrahim Secondary School"
+                value="Ahmad Ibrahim Secondary School"
+              />
+              <Picker.Item
+                label="Anderson Secondary School"
+                value="Anderson Secondary School"
+              />
+              <Picker.Item
+                label="Anglican High School"
+                value="Anglican High School"
+              />
+              <Picker.Item
+                label="Anglo-Chinese School (Barker Road)"
+                value="Anglo-Chinese School (Barker Road)"
+              />
+              <Picker.Item
+                label="Anglo-Chinese School (Independent)"
+                value="Anglo-Chinese School (Independent)"
+              />
+              <Picker.Item
+                label="Ang Mo Kio Secondary School"
+                value="Ang Mo Kio Secondary School"
+              />
+              <Picker.Item
+                label="Assumption English School"
+                value="Assumption English School"
+              />
+              <Picker.Item
+                label="Bartley Secondary School"
+                value="Bartley Secondary School"
+              />
+              <Picker.Item
+                label="Beatty Secondary School"
+                value="Beatty Secondary School"
+              />
+              <Picker.Item
+                label="Bedok Green Secondary School"
+                value="Bedok Green Secondary School"
+              />
+              <Picker.Item
+                label="Bedok South Secondary School"
+                value="Bedok South Secondary School"
+              />
+              <Picker.Item
+                label="Bedok View Secondary School"
+                value="Bedok View Secondary School"
+              />
+              <Picker.Item
+                label="Bendemeer Secondary School"
+                value="Bendemeer Secondary School"
+              />
+              <Picker.Item
+                label="Boon Lay Secondary School"
+                value="Boon Lay Secondary School"
+              />
+              <Picker.Item
+                label="Bowen Secondary School"
+                value="Bowen Secondary School"
+              />
+              <Picker.Item
+                label="Broadrick Secondary School"
+                value="Broadrick Secondary School"
+              />
+              <Picker.Item
+                label="Bukit Batok Secondary School"
+                value="Bukit Batok Secondary School"
+              />
+              <Picker.Item
+                label="Bukit Merah Secondary School"
+                value="Bukit Merah Secondary School"
+              />
+              <Picker.Item
+                label="Bukit Panjang Government High School"
+                value="Bukit Panjang Government High School"
+              />
+              <Picker.Item
+                label="Bukit View Secondary School"
+                value="Bukit View Secondary School"
+              />
+              <Picker.Item
+                label="Catholic High School"
+                value="Catholic High School"
+              />
+              <Picker.Item
+                label="Canberra Secondary School"
+                value="Canberra Secondary School"
+              />
+              <Picker.Item
+                label="Cedar Girls' Secondary School"
+                value="Cedar Girls' Secondary School"
+              />
+              <Picker.Item
+                label="Changkat Changi Secondary School"
+                value="Changkat Changi Secondary School"
+              />
+              <Picker.Item
+                label="CHIJ Katong Convent (Secondary)"
+                value="CHIJ Katong Convent (Secondary)"
+              />
+              <Picker.Item
+                label="CHIJ Secondary (Toa Payoh)"
+                value="CHIJ Secondary (Toa Payoh)"
+              />
+              <Picker.Item
+                label="CHIJ St. Joseph's Convent"
+                value="CHIJ St. Joseph's Convent"
+              />
+              <Picker.Item
+                label="CHIJ St. Nicholas Girls' School"
+                value="CHIJ St. Nicholas Girls' School"
+              />
+              <Picker.Item
+                label="CHIJ St. Theresa's Convent"
+                value="CHIJ St. Theresa's Convent"
+              />
+              <Picker.Item
+                label="Chua Chu Kang Secondary School"
+                value="Chua Chu Kang Secondary School"
+              />
+              <Picker.Item
+                label="Christ Church Secondary School"
+                value="Christ Church Secondary School"
+              />
+              <Picker.Item
+                label="Chung Cheng High School (Main)"
+                value="Chung Cheng High School (Main)"
+              />
+              <Picker.Item
+                label="Chung Cheng High School (Yishun)"
+                value="Chung Cheng High School (Yishun)"
+              />
+              <Picker.Item
+                label="Clementi Town Secondary School"
+                value="Clementi Town Secondary School"
+              />
+              <Picker.Item
+                label="Commonwealth Secondary School"
+                value="Commonwealth Secondary School"
+              />
+              <Picker.Item
+                label="Compassvale Secondary School"
+                value="Compassvale Secondary School"
+              />
+              <Picker.Item
+                label="Crescent Girls' School"
+                value="Crescent Girls' School"
+              />
+              <Picker.Item
+                label="Damai Secondary School"
+                value="Damai Secondary School"
+              />
+              <Picker.Item
+                label="Deyi Secondary School"
+                value="Deyi Secondary School"
+              />
+              <Picker.Item
+                label="Dunearn Secondary School"
+                value="Dunearn Secondary School"
+              />
+              <Picker.Item
+                label="Dunman High School"
+                value="Dunman High School"
+              />
+              <Picker.Item
+                label="Dunman Secondary School"
+                value="Dunman Secondary School"
+              />
+              <Picker.Item
+                label="East Spring Secondary School"
+                value="East Spring Secondary School"
+              />
+              <Picker.Item
+                label="Edgefield Secondary School"
+                value="Edgefield Secondary School"
+              />
+              <Picker.Item
+                label="Evergreen Secondary School"
+                value="Evergreen Secondary School"
+              />
+              <Picker.Item
+                label="Fairfield Methodist Secondary School"
+                value="Fairfield Methodist Secondary School"
+              />
+              <Picker.Item
+                label="Fuchun Secondary School"
+                value="Fuchun Secondary School"
+              />
+              <Picker.Item
+                label="Fuhua Secondary School"
+                value="Fuhua Secondary School"
+              />
+              <Picker.Item
+                label="Gan Eng Seng School"
+                value="Gan Eng Seng School"
+              />
+              <Picker.Item
+                label="Geylang Methodist School (Secondary)"
+                value="Geylang Methodist School (Secondary)"
+              />
+              <Picker.Item
+                label="Greendale Secondary School"
+                value="Greendale Secondary School"
+              />
+              <Picker.Item
+                label="Greenridge Secondary School"
+                value="Greenridge Secondary School"
+              />
+              <Picker.Item
+                label="Guangyang Secondary School"
+                value="Guangyang Secondary School"
+              />
+              <Picker.Item
+                label="Hai Sing Catholic School"
+                value="Hai Sing Catholic School"
+              />
+              <Picker.Item
+                label="Hillgrove Secondary School"
+                value="Hillgrove Secondary School"
+              />
+              <Picker.Item
+                label="Holy Innocents' High School"
+                value="Holy Innocents' High School"
+              />
+              <Picker.Item
+                label="Hougang Secondary School"
+                value="Hougang Secondary School"
+              />
+              <Picker.Item
+                label="Hua Yi Secondary School"
+                value="Hua Yi Secondary School"
+              />
+              <Picker.Item
+                label="Hwa Chong Institution"
+                value="Hwa Chong Institution"
+              />
+              <Picker.Item
+                label="Junyuan Secondary School"
+                value="Junyuan Secondary School"
+              />
+              <Picker.Item
+                label="Jurong Secondary School"
+                value="Jurong Secondary School"
+              />
+              <Picker.Item
+                label="Jurong West Secondary School"
+                value="Jurong West Secondary School"
+              />
+              <Picker.Item
+                label="Jurongville Secondary School"
+                value="Jurongville Secondary School"
+              />
+              <Picker.Item
+                label="Juying Secondary School"
+                value="Juying Secondary School"
+              />
+              <Picker.Item
+                label="Kent Ridge Secondary School"
+                value="Kent Ridge Secondary School"
+              />
+              <Picker.Item
+                label="Kranji Secondary School"
+                value="Kranji Secondary School"
+              />
+              <Picker.Item
+                label="Kuo Chuan Presbyterian Secondary School"
+                value="Kuo Chuan Presbyterian Secondary School"
+              />
+              <Picker.Item
+                label="Loyang View Secondary School"
+                value="Loyang View Secondary School"
+              />
+              <Picker.Item
+                label="Manjusri Secondary School"
+                value="Manjusri Secondary School"
+              />
+              <Picker.Item
+                label="Maris Stella High School"
+                value="Maris Stella High School"
+              />
+              <Picker.Item
+                label="Marsiling Secondary School"
+                value="Marsiling Secondary School"
+              />
+              <Picker.Item
+                label="Mayflower Secondary School"
+                value="Mayflower Secondary School"
+              />
+              <Picker.Item
+                label="Meridian Secondary School"
+                value="Meridian Secondary School"
+              />
+              <Picker.Item
+                label="Methodist Girls' School (Secondary)"
+                value="Methodist Girls' School (Secondary)"
+              />
+              <Picker.Item
+                label="Montfort Secondary School"
+                value="Montfort Secondary School"
+              />
+              <Picker.Item
+                label="Nan Chiau High School"
+                value="Nan Chiau High School"
+              />
+              <Picker.Item
+                label="Nan Hua High School"
+                value="Nan Hua High School"
+              />
+              <Picker.Item
+                label="Nanyang Girls' High School"
+                value="Nanyang Girls' High School"
+              />
+              <Picker.Item
+                label="National Junior College"
+                value="National Junior College"
+              />
+              <Picker.Item
+                label="Naval Base Secondary School"
+                value="Naval Base Secondary School"
+              />
+              <Picker.Item
+                label="New Town Secondary School"
+                value="New Town Secondary School"
+              />
+              <Picker.Item
+                label="Ngee Ann Secondary School"
+                value="Ngee Ann Secondary School"
+              />
+              <Picker.Item
+                label="North Vista Secondary School"
+                value="North Vista Secondary School"
+              />
+              <Picker.Item
+                label="Northbrooks Secondary School"
+                value="Northbrooks Secondary School"
+              />
+              <Picker.Item
+                label="Northland Secondary School"
+                value="Northland Secondary School"
+              />
+              <Picker.Item
+                label="NUS High School of Mathematics and Science"
+                value="NUS High School of Mathematics and Science"
+              />
+              <Picker.Item
+                label="Orchid Park Secondary School"
+                value="Orchid Park Secondary School"
+              />
+              <Picker.Item
+                label="Outram Secondary School"
+                value="Outram Secondary School"
+              />
+              <Picker.Item
+                label="Pasir Ris Crest Secondary School"
+                value="Pasir Ris Crest Secondary School"
+              />
+              <Picker.Item
+                label="Pasir Ris Secondary School"
+                value="Pasir Ris Secondary School"
+              />
+              <Picker.Item
+                label="Paya Lebar Methodist Girls' School (Secondary)"
+                value="Paya Lebar Methodist Girls' School (Secondary)"
+              />
+              <Picker.Item
+                label="Pei Hwa Secondary School"
+                value="Pei Hwa Secondary School"
+              />
+              <Picker.Item
+                label="Peicai Secondary School"
+                value="Peicai Secondary School"
+              />
+              <Picker.Item
+                label="Peirce Secondary School"
+                value="Peirce Secondary School"
+              />
+              <Picker.Item
+                label="Presbyterian High School"
+                value="Presbyterian High School"
+              />
+              <Picker.Item
+                label="Punggol Secondary School"
+                value="Punggol Secondary School"
+              />
+              <Picker.Item
+                label="Queenstown Secondary School"
+                value="Queenstown Secondary School"
+              />
+              <Picker.Item
+                label="Queensway Secondary School"
+                value="Queensway Secondary School"
+              />
+              <Picker.Item
+                label="Raffles Girls' School (Secondary)"
+                value="Raffles Girls' School (Secondary)"
+              />
+              <Picker.Item
+                label="Raffles Institution"
+                value="Raffles Institution"
+              />
+              <Picker.Item
+                label="Regent Secondary School"
+                value="Regent Secondary School"
+              />
+              <Picker.Item
+                label="Riverside Secondary School"
+                value="Riverside Secondary School"
+              />
+              <Picker.Item
+                label="River Valley High School"
+                value="River Valley High School"
+              />
+              <Picker.Item
+                label="St. Andrew's Secondary School"
+                value="St. Andrew's Secondary School"
+              />
+              <Picker.Item
+                label="St. Patrick's School"
+                value="St. Patrick's School"
+              />
+              <Picker.Item
+                label="School of Science and Technology, Singapore"
+                value="School of Science and Technology, Singapore"
+              />
+              <Picker.Item
+                label="School of the Arts"
+                value="School of the Arts"
+              />
+              <Picker.Item
+                label="Sembawang Secondary School"
+                value="Sembawang Secondary School"
+              />
+              <Picker.Item
+                label="Sengkang Secondary School"
+                value="Sengkang Secondary School"
+              />
+              <Picker.Item
+                label="Serangoon Garden Secondary School"
+                value="Serangoon Garden Secondary School"
+              />
+              <Picker.Item
+                label="Serangoon Secondary School"
+                value="Serangoon Secondary School"
+              />
+              <Picker.Item
+                label="Singapore Chinese Girls' School"
+                value="Singapore Chinese Girls' School"
+              />
+              <Picker.Item
+                label="Singapore Sports School"
+                value="Singapore Sports School"
+              />
+              <Picker.Item
+                label="Springfield Secondary School"
+                value="Springfield Secondary School"
+              />
+              <Picker.Item
+                label="St. Anthony's Canossian Secondary School"
+                value="St. Anthony's Canossian Secondary School"
+              />
+              <Picker.Item
+                label="St. Gabriel's Secondary School"
+                value="St. Gabriel's Secondary School"
+              />
+              <Picker.Item
+                label="St. Hilda's Secondary School"
+                value="St. Hilda's Secondary School"
+              />
+              <Picker.Item
+                label="St. Margaret's Secondary School"
+                value="St. Margaret's Secondary School"
+              />
+              <Picker.Item
+                label="St. Joseph's Institution"
+                value="St. Joseph's Institution"
+              />
+              <Picker.Item
+                label="Swiss Cottage Secondary School"
+                value="Swiss Cottage Secondary School"
+              />
+              <Picker.Item
+                label="Tanglin Secondary School"
+                value="Tanglin Secondary School"
+              />
+              <Picker.Item
+                label="Tampines Secondary School"
+                value="Tampines Secondary School"
+              />
+              <Picker.Item
+                label="Tanjong Katong Girls' School"
+                value="Tanjong Katong Girls' School"
+              />
+              <Picker.Item
+                label="Tanjong Katong Secondary School"
+                value="Tanjong Katong Secondary School"
+              />
+              <Picker.Item
+                label="Temasek Junior College"
+                value="Temasek Junior College"
+              />
+              <Picker.Item
+                label="Temasek Secondary School"
+                value="Temasek Secondary School"
+              />
+              <Picker.Item
+                label="Unity Secondary School"
+                value="Unity Secondary School"
+              />
+              <Picker.Item label="Victoria School" value="Victoria School" />
+              <Picker.Item
+                label="West Spring Secondary School"
+                value="West Spring Secondary School"
+              />
+              <Picker.Item
+                label="Westwood Secondary School"
+                value="Westwood Secondary School"
+              />
+              <Picker.Item
+                label="Whitley Secondary School"
+                value="Whitley Secondary School"
+              />
+              <Picker.Item
+                label="Woodgrove Secondary School"
+                value="Woodgrove Secondary School"
+              />
+              <Picker.Item
+                label="Woodlands Ring Secondary School"
+                value="Woodlands Ring Secondary School"
+              />
+              <Picker.Item
+                label="Woodlands Secondary School"
+                value="Woodlands Secondary School"
+              />
+              <Picker.Item
+                label="Xinmin Secondary School"
+                value="Xinmin Secondary School"
+              />
+              <Picker.Item
+                label="Yio Chu Kang Secondary School"
+                value="Yio Chu Kang Secondary School"
+              />
+              <Picker.Item
+                label="Yishun Secondary School"
+                value="Yishun Secondary School"
+              />
+              <Picker.Item
+                label="Yishun Town Secondary School"
+                value="Yishun Town Secondary School"
+              />
+              <Picker.Item
+                label="Yuan Ching Secondary School"
+                value="Yuan Ching Secondary School"
+              />
+              <Picker.Item
+                label="Yuhua Secondary School"
+                value="Yuhua Secondary School"
+              />
+              <Picker.Item
+                label="Yusof Ishak Secondary School"
+                value="Yusof Ishak Secondary School"
+              />
+              <Picker.Item
+                label="Yuying Secondary School"
+                value="Yuying Secondary School"
+              />
+              <Picker.Item
+                label="Zhenghua Secondary School"
+                value="Zhenghua Secondary School"
+              />
+              <Picker.Item
+                label="Zhonghua Secondary School"
+                value="Zhonghua Secondary School"
+              />
             </Picker>
           )}
 
-          {eduLevel === "Junior College" && showSchools && (
+          {eduLevel === "Junior College" && (
             <Picker
               selectedValue={school}
               onValueChange={(itemValue) => setSchool(itemValue)}
             >
               <Picker.Item label="Select your school" value="" />
-              <Picker.Item label="Anderson Serangoon Junior College" value="Anderson Serangoon Junior College" />
-              <Picker.Item label="Anglo-Chinese Junior College" value="Anglo-Chinese Junior College" />
-              <Picker.Item label="Anglo-Chinese School (Independent) (Junior College)" value="Anglo-Chinese School (Independent) (Junior College)" />
-              <Picker.Item label="Catholic Junior College" value="Catholic Junior College" />
-              <Picker.Item label="Dunman High School (Junior College)" value="Dunman High School (Junior College)" />
-              <Picker.Item label="Eunoia Junior College" value="Eunoia Junior College" />
-              <Picker.Item label="Hwa Chong Institution (Junior College)" value="Hwa Chong Institution (Junior College)" />
-              <Picker.Item label="Jurong Pioneer Junior College" value="Jurong Pioneer Junior College" />
-              <Picker.Item label="Millennia Institute" value="Millennia Institute" />
-              <Picker.Item label="Nanyang Junior College" value="Nanyang Junior College" />
-              <Picker.Item label="National Junior College" value="National Junior College" />
-              <Picker.Item label="NUS High School of Mathematics and Science" value="NUS High School of Mathematics and Science" />
-              <Picker.Item label="Raffles Institution (Junior College)" value="Raffles Institution (Junior College)" />
-              <Picker.Item label="River Valley High School (Junior College)" value="River Valley High School (Junior College)" />
-              <Picker.Item label="School of the Arts, Singapore" value="School of the Arts, Singapore" />
-              <Picker.Item label="School of the Arts, Singapore" value="School of the Arts, Singapore" />
-              <Picker.Item label="St Andrew’s Junior College" value="St Andrew’s Junior College" />
-              <Picker.Item label="St. Joseph’s Institution (Junior College)" value="St. Joseph’s Institution (Junior College)" />
-              <Picker.Item label="Tampines Meridian Junior College" value="Tampines Meridian Junior College" />
-              <Picker.Item label="Temasek Junior College" value="Temasek Junior College" />
-              <Picker.Item label="Temasek Junior College" value="Temasek Junior College" />
-              <Picker.Item label="Yishun Innova Junior College" value="Yishun Innova Junior College" />
+              <Picker.Item
+                label="Anderson Serangoon Junior College"
+                value="Anderson Serangoon Junior College"
+              />
+              <Picker.Item
+                label="Anglo-Chinese Junior College"
+                value="Anglo-Chinese Junior College"
+              />
+              <Picker.Item
+                label="Anglo-Chinese School (Independent) (Junior College)"
+                value="Anglo-Chinese School (Independent) (Junior College)"
+              />
+              <Picker.Item
+                label="Catholic Junior College"
+                value="Catholic Junior College"
+              />
+              <Picker.Item
+                label="Dunman High School (Junior College)"
+                value="Dunman High School (Junior College)"
+              />
+              <Picker.Item
+                label="Eunoia Junior College"
+                value="Eunoia Junior College"
+              />
+              <Picker.Item
+                label="Hwa Chong Institution (Junior College)"
+                value="Hwa Chong Institution (Junior College)"
+              />
+              <Picker.Item
+                label="Jurong Pioneer Junior College"
+                value="Jurong Pioneer Junior College"
+              />
+              <Picker.Item
+                label="Millennia Institute"
+                value="Millennia Institute"
+              />
+              <Picker.Item
+                label="Nanyang Junior College"
+                value="Nanyang Junior College"
+              />
+              <Picker.Item
+                label="National Junior College"
+                value="National Junior College"
+              />
+              <Picker.Item
+                label="NUS High School of Mathematics and Science"
+                value="NUS High School of Mathematics and Science"
+              />
+              <Picker.Item
+                label="Raffles Institution (Junior College)"
+                value="Raffles Institution (Junior College)"
+              />
+              <Picker.Item
+                label="River Valley High School (Junior College)"
+                value="River Valley High School (Junior College)"
+              />
+              <Picker.Item
+                label="School of the Arts, Singapore"
+                value="School of the Arts, Singapore"
+              />
+              <Picker.Item
+                label="School of the Arts, Singapore"
+                value="School of the Arts, Singapore"
+              />
+              <Picker.Item
+                label="St Andrew’s Junior College"
+                value="St Andrew’s Junior College"
+              />
+              <Picker.Item
+                label="St. Joseph’s Institution (Junior College)"
+                value="St. Joseph’s Institution (Junior College)"
+              />
+              <Picker.Item
+                label="Tampines Meridian Junior College"
+                value="Tampines Meridian Junior College"
+              />
+              <Picker.Item
+                label="Temasek Junior College"
+                value="Temasek Junior College"
+              />
+              <Picker.Item
+                label="Temasek Junior College"
+                value="Temasek Junior College"
+              />
+              <Picker.Item
+                label="Yishun Innova Junior College"
+                value="Yishun Innova Junior College"
+              />
             </Picker>
           )}
 
@@ -482,76 +1051,131 @@ const Profile = () => {
               onValueChange={(itemValue) => setSchool(itemValue)}
             >
               <Picker.Item label="Select your school" value="" />
-              <Picker.Item label="Nanyang Polytechnic" value="Nanyang Polytechnic" />
-              <Picker.Item label="Ngee Ann Polytechnic" value="Ngee Ann Polytechnic" />
-              <Picker.Item label="Republic Polytechnic" value="Republic Polytechnic" />
-              <Picker.Item label="Singapore Polytechnic" value="Singapore Polytechnic" />
-              <Picker.Item label="Temasek Polytechnic" value="Temasek Polytechnic" />
+              <Picker.Item
+                label="Nanyang Polytechnic"
+                value="Nanyang Polytechnic"
+              />
+              <Picker.Item
+                label="Ngee Ann Polytechnic"
+                value="Ngee Ann Polytechnic"
+              />
+              <Picker.Item
+                label="Republic Polytechnic"
+                value="Republic Polytechnic"
+              />
+              <Picker.Item
+                label="Singapore Polytechnic"
+                value="Singapore Polytechnic"
+              />
+              <Picker.Item
+                label="Temasek Polytechnic"
+                value="Temasek Polytechnic"
+              />
             </Picker>
           )}
 
-          {eduLevel === "University" && showSchools && (
+          {eduLevel === "University" && (
             <Picker
               selectedValue={school}
               onValueChange={(itemValue) => setSchool(itemValue)}
             >
               <Picker.Item label="Select your school" value="" />
-              <Picker.Item label="National University of Singapore" value="National University of Singapore" />
-              <Picker.Item label="Nanyang Technological University" value="Nanyang Technological University" />
-              <Picker.Item label="Singapore Management University" value="Singapore Management University" />
-              <Picker.Item label="Singapore University of Technology and Design" value="Singapore University of Technology and Design" />
-              <Picker.Item label="Singapore Institute of Technology" value="Singapore Institute of Technology" />
-              <Picker.Item label="Singapore University of Social Sciences" value="Singapore University of Social Sciences" />
+              <Picker.Item
+                label="National University of Singapore"
+                value="National University of Singapore"
+              />
+              <Picker.Item
+                label="Nanyang Technological University"
+                value="Nanyang Technological University"
+              />
+              <Picker.Item
+                label="Singapore Management University"
+                value="Singapore Management University"
+              />
+              <Picker.Item
+                label="Singapore University of Technology and Design"
+                value="Singapore University of Technology and Design"
+              />
+              <Picker.Item
+                label="Singapore Institute of Technology"
+                value="Singapore Institute of Technology"
+              />
+              <Picker.Item
+                label="Singapore University of Social Sciences"
+                value="Singapore University of Social Sciences"
+              />
             </Picker>
           )}
-          </View>
+        </View>
 
-          <MultipleSelectList
-            boxStyles={styles.textInput}
-            setSelected={(val)=> setStrengths(val)}
-            data = {subjects}
-            placeholder = "Select your strong subjects"
-            label = "Your strong subjects"
-            onSelect={() => console.log(strengths)}
-            save="value"
-            notFoundText="No subject exists"
-          /> 
+        <MultipleSelectList
+          boxStyles={styles.textInput}
+          setSelected={(val) => setStrengths(val)}
+          data={subjects}
+          placeholder="Select your strong subjects"
+          label="Your strong subjects"
+          onSelect={() => console.log(strengths)}
+          save="value"
+          notFoundText="No subject exists"
+        />
 
-          <MultipleSelectList
-            boxStyles={styles.textInput}
-            setSelected={(val)=> setWeaknesses(val)}
-            data = {subjects}
-            placeholder = "Select your weak subjects"
-            label = "Your weak subjects"
-            onSelect={() => console.log(weaknesses)}
-            save="value"
-            notFoundText="No subject exists"
-          /> 
+        <MultipleSelectList
+          boxStyles={styles.textInput}
+          setSelected={(val) => setWeaknesses(val)}
+          data={subjects}
+          placeholder="Select your weak subjects"
+          label="Your weak subjects"
+          onSelect={() => console.log(weaknesses)}
+          save="value"
+          notFoundText="No subject exists"
+        />
       </View>
 
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-        <Button title="Pick a profile picture" onPress={pickImage} style = {[styles.button]}/>
-        {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
+      <View
+        style={{
+          alignItems: "center",
+          marginTop: 10,
+          height: 200,
+        }}
+      >
+        <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+          <Text style={{ color: "white" }}>Pick a Profile Picture</Text>
+        </TouchableOpacity>
+        {image ? (
+          <Image source={{ uri: image }} style={styles.pfp} />
+        ) : (
+          <Image
+            source={require("../../assets/images/emptyPic.png")}
+            style={styles.pfp}
+          />
+        )}
       </View>
 
       <View style={styles.buttonContainer}>
-          <TouchableOpacity onPress={handleProfileEdit} style={styles.button}>
+        <TouchableOpacity onPress={handleProfileEdit} style={styles.button}>
           <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
       </View>
-
-    </KeyboardAvoidingView>
-
+    </ScrollView>
   );
 };
 
 export default Profile;
 
 const styles = StyleSheet.create({
+  uploadButton: {
+    padding: 10,
+    backgroundColor: colors.darkBlue,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
   container: {
-    flex: 1,
+    minHeight: "100%",
     backgroundColor: colors.limeGreen,
     alignItems: "center",
+    paddingVertical: 50,
+    paddingBottom: 100,
+    flexGrow: 1,
   },
   pfp: {
     marginTop: 100,
@@ -589,22 +1213,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   textInput: {
-    backgroundColor: colors.beige,
+    backgroundColor: colors.lightPink,
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
     marginTop: 5,
   },
   inputContainer: {
-      marginTop: 40,
-      width: "80%",
+    marginTop: 40,
+    width: "80%",
   },
   button: {
-      backgroundColor: colors.darkBlue,
-      width: "100%",
-      padding: 15,
-      borderRadius: 10,
-      alignItems: "center",
+    backgroundColor: colors.darkBlue,
+    width: "100%",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
   },
   buttonOutline: {
     backgroundColor: colors.limeGreen,
@@ -626,13 +1250,21 @@ const styles = StyleSheet.create({
     width: "60%",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 100,
   },
   pickerInput: {
-    backgroundColor: colors.beige,
+    backgroundColor: colors.lightPink,
     paddingHorizontal: 15,
     paddingVertical: 0,
     borderRadius: 10,
     marginTop: 5,
+  },
+  pfp: {
+    height: 200,
+    width: 200,
+    borderRadius: 400,
+    borderWidth: 2,
+    borderColor: colors.brown,
+    marginBottom: 10,
   },
 });

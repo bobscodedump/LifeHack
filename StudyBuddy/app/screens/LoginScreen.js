@@ -53,6 +53,8 @@ const LoginScreen = () => {
           strengths: "",
           weaknesses: "",
           matches: "",
+          image: "",
+          level: "",
         });
       })
       .catch((error) => {
