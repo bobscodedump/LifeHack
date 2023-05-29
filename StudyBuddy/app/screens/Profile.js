@@ -142,6 +142,7 @@ const Profile = () => {
       <Text style={styles.profileHeader}>Update Profile</Text>
       <View style={styles.inputContainer}>
         <TextInput
+          placeholder="Username:"
           defaultValue={username}
           placeholderTextColor="black"
           onChangeText={(text) => {
@@ -151,6 +152,7 @@ const Profile = () => {
         />
 
         <TextInput
+          placeholder="Telegram Handle:"
           defaultValue={telehandle}
           placeholderTextColor="black"
           onChangeText={(text) => {
