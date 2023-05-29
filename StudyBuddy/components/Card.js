@@ -9,7 +9,7 @@ import {
   Text,
 } from "react-native";
 
-const TinderSwipe = () => {
+const Card = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const position = useRef(new Animated.ValueXY()).current;
   const panResponder = useRef(
@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
   },
   cardStyle: {
     position: "absolute",
+    top: 70,
     width: 300,
     height: 400,
     borderRadius: 10,
@@ -145,4 +146,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TinderSwipe;
+export default Card;
