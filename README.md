@@ -18,3 +18,5 @@ Throughout the development of StudyPals, we gained valuable insights into user p
 
 # What's next for StudyPals
 We plan to expand Studypals by incorporating features like real-time study group sessions, in-app study resources, and a rating system for study partners. We aim to enhance the app's functionality, improve user engagement, and continue fostering a supportive and collaborative learning environment for students.
+
+# How to run: 
