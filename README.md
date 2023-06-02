@@ -20,3 +20,13 @@ Throughout the development of StudyPals, we gained valuable insights into user p
 We plan to expand Studypals by incorporating features like real-time study group sessions, in-app study resources, and a rating system for study partners. We aim to enhance the app's functionality, improve user engagement, and continue fostering a supportive and collaborative learning environment for students.
 
 # How to run: 
+1. Navigate to StudyBuddy directory
+2. Run npm i to install npm packages
+3. Run npm start, scan the QR code (requires expo go app)
+
+# Demo link:
+https://expo.dev/@bobbylee/StudyPals?serviceType=classic&distribution=expo-go (may not work with ios due to limitations of expo go)
+
+# Built with:
+Expo, React Native, Firebase
+
